@@ -525,6 +525,44 @@ void GSDDumpWriter::writeAttributes(const SnapshotParticleData<float>& snapshot,
                 m_nondefault["particles/moment_inertia"] = true;
             }
         }
+
+        // Net force
+        {
+        std::vector<float> data(N*4);
+        data.reserve(1); //! make sure we allocate
+        bool all_default = true;
+
+        for (unsigned int group_idx = 0; group_idx < N; group_idx++)
+            {
+            unsigned int t = m_group->getMemberTag(group_idx);
+
+            // look up tag in snapshot
+            auto it = map.find(t);
+            assert(it != map.end());
+
+            if (snapshot.net_force[it->second].s != float(0.0) ||
+                snapshot.net_force[it->second].v.x != float(0.0) ||
+                snapshot.net_force[it->second].v.y != float(0.0) ||
+                snapshot.net_force[it->second].v.z != float(0.0))
+                {
+                all_default = false;
+                }
+
+            data[group_idx*4+0] = float(snapshot.net_force[it->second].s);
+            data[group_idx*4+1] = float(snapshot.net_force[it->second].v.x);
+            data[group_idx*4+2] = float(snapshot.net_force[it->second].v.y);
+            data[group_idx*4+3] = float(snapshot.net_force[it->second].v.z);
+            }
+
+        if (!all_default || (nframes > 0 && m_nondefault["particles/net_force"]))
+            {
+            m_exec_conf->msg->notice(10) << "dump.gsd: writing particles/net_force" << endl;
+            retval = gsd_write_chunk(&m_handle, "particles/net_force", GSD_TYPE_FLOAT, N, 4, 0, (void *)&data[0]);
+            checkError(retval);
+            if (nframes == 0)
+                m_nondefault["particles/net_force"] = true;
+            }
+        }
     }
 
 /*! \param snapshot particle data snapshot to write out to the file
@@ -904,7 +942,8 @@ void GSDDumpWriter::populateNonDefault()
                                    "particles/orientation",
                                    "particles/velocity",
                                    "particles/angmom",
-                                   "particles/image"};
+                                   "particles/image",
+                                   "particles/net_force"};
 
     for (auto const& chunk : chunks)
         {
