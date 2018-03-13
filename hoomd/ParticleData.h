@@ -216,6 +216,10 @@ struct PYBIND11_EXPORT SnapshotParticleData {
     //! Get angular momentum as a numpy array
     static pybind11::object getAngmomNP(pybind11::object self);
 
+    //! Net force
+    //! Get net force as a Python object
+    pybind11::object getNetForceNP();
+
     //! Get the type names for python
     pybind11::list getTypes();
     //! Set the type names from python
@@ -233,6 +237,9 @@ struct PYBIND11_EXPORT SnapshotParticleData {
     std::vector< quat<Real> > orientation;     //!< orientations
     std::vector< quat<Real> > angmom;          //!< angular momentum quaternion
     std::vector< vec3<Real> > inertia;         //!< principal moments of inertia
+
+    //! Net force
+    std::vector< quat<Real> > net_force;       //!< Net force
 
     unsigned int size;                         //!< number of particles in this snapshot
     std::vector<std::string> type_mapping;     //!< Mapping between particle type ids and names
