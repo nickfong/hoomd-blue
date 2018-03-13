@@ -1003,6 +1003,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
     ArrayHandle< unsigned int > h_tag(m_tag, access_location::host, access_mode::read);
     ArrayHandle< unsigned int > h_rtag(m_rtag, access_location::host, access_mode::read);
 
+    // Net force
+    ArrayHandle< Scalar4 > h_net_force(m_net_force, access_location::host, access_mode::read);
+
 #ifdef ENABLE_MPI
     if (m_decomposition)
         {
@@ -1021,6 +1024,10 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
         std::vector<Scalar3> inertia(m_nparticles);
         std::vector<unsigned int> tag(m_nparticles);
         std::map<unsigned int, unsigned int> rtag_map;
+
+        // Net force
+        std::vector<Scalar4> net_force(m_nparticles);
+
         for (unsigned int idx = 0; idx < m_nparticles; idx++)
             {
             pos[idx] = make_scalar3(h_pos.data[idx].x, h_pos.data[idx].y, h_pos.data[idx].z) - m_origin;
@@ -1039,6 +1046,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
             angmom[idx] = h_angmom.data[idx];
             inertia[idx] = h_inertia.data[idx];
 
+            // Net force
+            net_force[idx] = h_net_force.data[idx];
+
             // insert reverse lookup global tag -> idx
             rtag_map.insert(std::pair<unsigned int, unsigned int>(h_tag.data[idx], idx));
             }
@@ -1055,6 +1065,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
         std::vector< std::vector<Scalar4 > > orientation_proc;     // Orientations of every processor
         std::vector< std::vector<Scalar4 > > angmom_proc;          // Angular momenta of every processor
         std::vector< std::vector<Scalar3 > > inertia_proc;         // Moments of inertia of every processor
+
+        // Net force
+        std::vector< std::vector<Scalar4 > > net_force_proc;       // Net force of every processor
 
         std::vector< std::map<unsigned int, unsigned int> > rtag_map_proc; // List of reverse-lookup maps
 
@@ -1077,6 +1090,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
         inertia_proc.resize(size);
         rtag_map_proc.resize(size);
 
+        // Net force
+        net_force_proc.resize(size);
+
         unsigned int root = 0;
 
         // collect all particle data on the root processor
@@ -1092,6 +1108,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
         gather_v(orientation, orientation_proc, root, mpi_comm);
         gather_v(angmom, angmom_proc, root, mpi_comm);
         gather_v(inertia, inertia_proc, root, mpi_comm);
+
+        // Net force
+        gather_v(net_force, net_force_proc, root, mpi_comm);
 
         // gather the reverse-lookup maps
         gather_v(rtag_map, rtag_map_proc, root, mpi_comm);
@@ -1152,6 +1171,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
                 snapshot.angmom[snap_id] = quat<Real>(angmom_proc[rank][idx]);
                 snapshot.inertia[snap_id] = vec3<Real>(inertia_proc[rank][idx]);
 
+                // Net force
+                snapshot.net_force[snap_id] = quat<Real>(net_force_proc[rank][idx]);
+
                 // make sure the position stored in the snapshot is within the boundaries
                 Scalar3 tmp = vec_to_scalar3(snapshot.pos[snap_id]);
                 m_global_box.wrap(tmp, snapshot.image[snap_id]);
@@ -1196,6 +1218,9 @@ std::map<unsigned int, unsigned int> ParticleData::takeSnapshot(SnapshotParticle
             snapshot.orientation[snap_id] = quat<Real>(h_orientation.data[idx]);
             snapshot.angmom[snap_id] = quat<Real>(h_angmom.data[idx]);
             snapshot.inertia[snap_id] = vec3<Real>(h_inertia.data[idx]);
+
+            // Net force
+            snapshot.net_force[snap_id] = quat<Real>(h_net_force.data[idx]);
 
             // make sure the position stored in the snapshot is within the boundaries
             Scalar3 tmp = vec_to_scalar3(snapshot.pos[snap_id]);
@@ -2366,6 +2391,10 @@ void SnapshotParticleData<Real>::resize(unsigned int N)
     orientation.resize(N,quat<Real>(1.0,vec3<Real>(0.0,0.0,0.0)));
     angmom.resize(N,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
     inertia.resize(N,vec3<Real>(0.0,0.0,0.0));
+
+    // Net force
+    net_force.resize(N,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
+
     size = N;
     is_accel_set = false;
     }
@@ -2386,6 +2415,10 @@ void SnapshotParticleData<Real>::insert(unsigned int i, unsigned int n)
     orientation.insert(orientation.begin()+i,n,quat<Real>(1.0,vec3<Real>(0.0,0.0,0.0)));
     angmom.insert(angmom.begin()+i,n,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
     inertia.insert(inertia.begin()+i,n,vec3<Real>(0.0,0.0,0.0));
+
+    // Net force
+    net_force.insert(net_force.begin()+i,n,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
+
     size += n;
     is_accel_set = false;
     }
@@ -2400,7 +2433,8 @@ bool SnapshotParticleData<Real>::validate() const
     if (pos.size() != size || vel.size() != size || accel.size() != size || type.size() != size ||
         mass.size() != size || charge.size() != size || diameter.size() != size ||
         image.size() != size || body.size() != size || orientation.size() != size || angmom.size() != size ||
-        inertia.size() != size)
+        inertia.size() != size ||
+        net_force.size() != size)
         return false;
 
     return true;
@@ -3144,6 +3178,23 @@ void SnapshotParticleData<Real>::setTypes(py::list types)
         type_mapping[i] = py::cast<string>(types[i]);
     }
 
+// Net force
+/*! \returns a numpy array that wraps the net force data element.
+    The raw data is referenced by the numpy array, modifications to the numpy array will modify the snapshot
+*/
+template <class Real>
+py::object SnapshotParticleData<Real>::getNetForceNP()
+    {
+    // mark as dirty when accessing internal data
+    is_accel_set = false;
+
+    std::vector<intp> dims(2);
+    dims[0] = net_force.size();
+    dims[1] = 4;
+    return py::object(num_util::makeNumFromData((Real*)&net_force[0], dims), false);
+    }
+
+
 #ifdef ENABLE_MPI
 template <class Real>
 void SnapshotParticleData<Real>::bcast(unsigned int root, MPI_Comm mpi_comm)
@@ -3161,6 +3212,9 @@ void SnapshotParticleData<Real>::bcast(unsigned int root, MPI_Comm mpi_comm)
     ::bcast(orientation, root, mpi_comm);
     ::bcast(angmom, root, mpi_comm);
     ::bcast(inertia, root, mpi_comm);
+
+    // Net force
+    ::bcast(net_force, root, mpi_comm);
 
     ::bcast(size, root, mpi_comm);
     ::bcast(type_mapping, root, mpi_comm);
@@ -3188,6 +3242,10 @@ void export_SnapshotParticleData(py::module& m)
     .def_property_readonly("orientation", &SnapshotParticleData<float>::getOrientationNP, py::return_value_policy::take_ownership)
     .def_property_readonly("moment_inertia", &SnapshotParticleData<float>::getMomentInertiaNP, py::return_value_policy::take_ownership)
     .def_property_readonly("angmom", &SnapshotParticleData<float>::getAngmomNP, py::return_value_policy::take_ownership)
+
+    // Net force
+    .def_property_readonly("net_force", &SnapshotParticleData<float>::getNetForceNP, py::return_value_policy::take_ownership)
+
     .def_property("types", &SnapshotParticleData<float>::getTypes, &SnapshotParticleData<float>::setTypes)
     .def_readonly("N", &SnapshotParticleData<float>::size)
     .def("resize", &SnapshotParticleData<float>::resize)
@@ -3209,6 +3267,10 @@ void export_SnapshotParticleData(py::module& m)
     .def_property_readonly("orientation", &SnapshotParticleData<double>::getOrientationNP, py::return_value_policy::take_ownership)
     .def_property_readonly("moment_inertia", &SnapshotParticleData<double>::getMomentInertiaNP, py::return_value_policy::take_ownership)
     .def_property_readonly("angmom", &SnapshotParticleData<double>::getAngmomNP, py::return_value_policy::take_ownership)
+
+    // Net force
+    .def_property_readonly("net_force", &SnapshotParticleData<double>::getNetForceNP, py::return_value_policy::take_ownership)
+
     .def_property("types", &SnapshotParticleData<double>::getTypes, &SnapshotParticleData<double>::setTypes)
     .def_readonly("N", &SnapshotParticleData<double>::size)
     .def("resize", &SnapshotParticleData<double>::resize)
