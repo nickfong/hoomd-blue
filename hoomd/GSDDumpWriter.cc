@@ -651,7 +651,7 @@ void GSDDumpWriter::writeProperties(const SnapshotParticleData<float>& snapshot,
             if (snapshot.net_force[it->second].v.z != float(0.0))
                 all_default = false;
 
-            data[group_idx] = float(snapshot.net_force[it->second].s);
+            data[group_idx] = float(snapshot.net_force[it->second].v.z);
             }
 
         if (!all_default || (nframes > 0 && m_nondefault["particles/net_energy"]))
