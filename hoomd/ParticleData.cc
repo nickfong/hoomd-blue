@@ -2393,7 +2393,7 @@ void SnapshotParticleData<Real>::resize(unsigned int N)
     inertia.resize(N,vec3<Real>(0.0,0.0,0.0));
 
     // Net force
-    net_force.resize(N,quat<Real>(vec3<Real>(0.0,0.0,0.0)),0.0);
+    net_force.resize(N,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
 
     size = N;
     is_accel_set = false;
@@ -2417,7 +2417,7 @@ void SnapshotParticleData<Real>::insert(unsigned int i, unsigned int n)
     inertia.insert(inertia.begin()+i,n,vec3<Real>(0.0,0.0,0.0));
 
     // Net force
-    net_force.insert(net_force.begin()+i,n,quat<Real>(vec3<Real>(0.0,0.0,0.0), 0.0));
+    net_force.insert(net_force.begin()+i,n,quat<Real>(0.0,vec3<Real>(0.0,0.0,0.0)));
 
     size += n;
     is_accel_set = false;
