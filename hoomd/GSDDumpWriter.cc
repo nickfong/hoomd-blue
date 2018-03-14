@@ -618,10 +618,10 @@ void GSDDumpWriter::writeProperties(const SnapshotParticleData<float>& snapshot,
                 all_default = false;
                 }
 
-            data[group_idx*4+0] = float(snapshot.net_force[it->second].s);
-            data[group_idx*4+1] = float(snapshot.net_force[it->second].v.x);
-            data[group_idx*4+2] = float(snapshot.net_force[it->second].v.y);
-            data[group_idx*4+3] = float(snapshot.net_force[it->second].v.z);
+            data[group_idx*4+0] = float(snapshot.net_force[it->second].v.z);
+            data[group_idx*4+1] = float(snapshot.net_force[it->second].s);
+            data[group_idx*4+2] = float(snapshot.net_force[it->second].v.x);
+            data[group_idx*4+3] = float(snapshot.net_force[it->second].v.y);
             }
 
         if (!all_default || (nframes > 0 && m_nondefault["particles/net_force"]))
@@ -648,7 +648,7 @@ void GSDDumpWriter::writeProperties(const SnapshotParticleData<float>& snapshot,
             auto it = map.find(t);
             assert(it != map.end());
 
-            if (snapshot.net_force[it->second].s != float(0.0))
+            if (snapshot.net_force[it->second].v.z != float(0.0))
                 all_default = false;
 
             data[group_idx] = float(snapshot.net_force[it->second].s);
