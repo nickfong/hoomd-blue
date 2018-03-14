@@ -563,6 +563,36 @@ void GSDDumpWriter::writeAttributes(const SnapshotParticleData<float>& snapshot,
                 m_nondefault["particles/net_force"] = true;
             }
         }
+        // Net energy
+        {
+        std::vector<float> data(N);
+        data.reserve(1); // Allocate
+        bool all_default = true;
+
+        for (unsigned int group_idx = 0; group_idx < N; group_idx++)
+            {
+            unsigned int t = m_group->getMemberTag(group_idx);
+
+            // look up tag in snapshot
+            auto it = map.find(t);
+            assert(it != map.end());
+
+            if (snapshot.net_force[it->second].s != float(0.0))
+                all_default = false;
+
+            data[group_idx] = float(snapshot.net_force[it->second].s);
+            }
+
+        if (!all_default || (nframes > 0 && m_nondefault["particles/net_energy"]))
+            {
+            m_exec_conf->msg->notice(10) << "dump.gsd: writing particles/net_energy" << endl;
+            retval = gsd_write_chunk(&m_handle, "particles/net_energy", GSD_TYPE_FLOAT, N, 1, 0, (void *)&data[0]);
+            checkError(retval);
+            if (nframes == 0)
+                m_nondefault["particles/net_energy"] = true;
+            }
+        }
+
     }
 
 /*! \param snapshot particle data snapshot to write out to the file
@@ -943,7 +973,8 @@ void GSDDumpWriter::populateNonDefault()
                                    "particles/velocity",
                                    "particles/angmom",
                                    "particles/image",
-                                   "particles/net_force"};
+                                   "particles/net_force",
+                                   "particles/net_energy"};
 
     for (auto const& chunk : chunks)
         {
