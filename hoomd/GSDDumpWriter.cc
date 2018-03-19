@@ -617,8 +617,10 @@ void GSDDumpWriter::writeProperties(const SnapshotParticleData<float>& snapshot,
                 {
                 all_default = false;
                 }
-
-            data[group_idx*4+0] = float(snapshot.net_force[it->second].v.z);
+            // 0th entry: Sum of force absolute values
+            data[group_idx*4+0] = fabs(float(snapshot.net_force[it->second].s)) +
+                                  fabs(float(snapshot.net_force[it->second].v.x)) +
+                                  fabs(float(snapshot.net_force[it->second].v.y));
             data[group_idx*4+1] = float(snapshot.net_force[it->second].s);
             data[group_idx*4+2] = float(snapshot.net_force[it->second].v.x);
             data[group_idx*4+3] = float(snapshot.net_force[it->second].v.y);
