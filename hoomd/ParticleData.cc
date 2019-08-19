@@ -3526,11 +3526,23 @@ py::object SnapshotParticleData<Real>::getNetForceNP()
     // mark as dirty when accessing internal data
     is_accel_set = false;
 
-    std::vector<intp> dims(2);
+    std::vector<size_t> dims(2);
     dims[0] = net_force.size();
     dims[1] = 4;
-    return py::object(num_util::makeNumFromData((Real*)&net_force[0], dims), false);
+    return pybind11::array(dims, (Real*)&net_force[0], self);
     }
+
+//py::object SnapshotParticleData<Real>::getNetForceNP()
+//    {
+//    auto self_cpp = self.cast<SnapshotParticleData<Real> *>();
+//    // mark as dirty when accessing internal data
+//    self_cpp->is_accel_set = false;
+//
+//    std::vector<size_t> dims(2);
+//    dims[0] = self_cpp->net_force.size();
+//    dims[1] = 4;
+//    return pybind11::array(dims, (Real*)&self_cpp->net_force[0], self);
+//    }
 
 
 #ifdef ENABLE_MPI
@@ -3582,7 +3594,7 @@ void export_SnapshotParticleData(py::module& m)
     .def_property_readonly("angmom", &SnapshotParticleData<float>::getAngmomNP)
 
     // Net force
-    .def_property_readonly("net_force", &SnapshotParticleData<float>::getNetForceNP, py::return_value_policy::take_ownership)
+    .def_property_readonly("net_force", &SnapshotParticleData<float>::getNetForceNP)
 
     .def_property("types", &SnapshotParticleData<float>::getTypes, &SnapshotParticleData<float>::setTypes)
     .def_readonly("N", &SnapshotParticleData<float>::size)
@@ -3608,7 +3620,7 @@ void export_SnapshotParticleData(py::module& m)
     .def_property_readonly("angmom", &SnapshotParticleData<double>::getAngmomNP, py::return_value_policy::take_ownership)
 
     // Net force
-    .def_property_readonly("net_force", &SnapshotParticleData<double>::getNetForceNP, py::return_value_policy::take_ownership)
+    .def_property_readonly("net_force", &SnapshotParticleData<double>::getNetForceNP)
 
     .def_property("types", &SnapshotParticleData<double>::getTypes, &SnapshotParticleData<double>::setTypes)
     .def_readonly("N", &SnapshotParticleData<double>::size)
