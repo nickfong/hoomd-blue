@@ -218,7 +218,7 @@ struct PYBIND11_EXPORT SnapshotParticleData {
 
     //! Net force
     //! Get net force as a Python object
-    pybind11::object getNetForceNP();
+    pybind11::object getNetForceNP(pybind11::object self);
 
     //! Get the type names for python
     pybind11::list getTypes();
