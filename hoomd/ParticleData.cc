@@ -3521,7 +3521,7 @@ void SnapshotParticleData<Real>::setTypes(py::list types)
     The raw data is referenced by the numpy array, modifications to the numpy array will modify the snapshot
 */
 template <class Real>
-py::object SnapshotParticleData<Real>::getNetForceNP()
+py::object SnapshotParticleData<Real>::getNetForceNP(pybind11::object self)
     {
     // mark as dirty when accessing internal data
     is_accel_set = false;
